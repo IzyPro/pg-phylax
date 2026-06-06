@@ -1,0 +1,66 @@
+services:
+  pgbackup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Match your PostgreSQL version
+        PG_VERSION: "16"
+    image: pgbackup:latest
+    container_name: pgbackup
+    restart: unless-stopped
+
+    environment:
+      # ---- PostgreSQL Connection --------------------------------
+      # Use the container name if on the same Docker network
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      # Comma-separated for multiple databases: db1,db2,db3
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Extra pg_dump options - defaults to -Z1 --no-owner --no-acl
+      POSTGRES_EXTRA_OPTS: ${POSTGRES_EXTRA_OPTS:--Z1 --no-owner --no-acl}
+
+      # ---- Cloudflare R2 ---------------------------------------
+      # Endpoint format: https://<account_id>.r2.cloudflarestorage.com
+      S3_ENDPOINT: ${S3_ENDPOINT}
+      S3_BUCKET: ${S3_BUCKET}
+      S3_PREFIX: ${S3_PREFIX:-postgres-backups}
+      S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID}
+      S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY}
+      # R2 requires auto or us-east-1
+      S3_REGION: ${S3_REGION:-auto}
+      # Required for R2 signature compatibility
+      S3_S3V4: "yes"
+
+      # ---- Backup Schedule -------------------------------------
+      # Standard cron: "0 2 * * *" (daily at 2am)
+      # Shortcuts: @daily @weekly @monthly
+      # Leave empty to run once and exit (useful for testing)
+      SCHEDULE: ${SCHEDULE:-0 2 * * *}
+      TZ: ${TZ:-Africa/Lagos}
+
+      # ---- Retention Policy ------------------------------------
+      BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-7}
+      BACKUP_KEEP_WEEKS: ${BACKUP_KEEP_WEEKS:-4}
+      BACKUP_KEEP_MONTHS: ${BACKUP_KEEP_MONTHS:-12}
+
+      # ---- Telegram Notifications ------------------------------
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID}
+      SERVER_NAME: ${SERVER_NAME:-production}
+
+    # Security hardening
+    security_opt:
+      - no-new-privileges:true
+    read_only: false
+    cap_drop:
+      - ALL
+
+    networks:
+      - coolify
+
+networks:
+  coolify:
+    external: true

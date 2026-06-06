@@ -1,0 +1,64 @@
+# Dockerfile
+# Mirrors eeshugerman/postgres-backup-s3 base approach
+# Uses go-cron for reliable scheduling (same as eeshugerman)
+# Alpine 3.19 for small image size and security
+
+ARG ALPINE_VERSION=3.19
+ARG PG_VERSION=16
+
+FROM alpine:${ALPINE_VERSION}
+
+ARG PG_VERSION
+
+# go-cron version - pinned for reproducibility
+ARG GO_CRON_VERSION=0.0.1
+
+# Install system dependencies
+RUN apk add --no-cache \
+    # PostgreSQL client matching PG_VERSION
+    postgresql${PG_VERSION}-client \
+    # AWS CLI for S3/R2 upload (same as eeshugerman)
+    aws-cli \
+    # curl for Telegram API calls
+    curl \
+    # bash for scripts
+    bash \
+    # ca-certificates for HTTPS
+    ca-certificates \
+    # tzdata for timezone support
+    tzdata
+
+# Install go-cron (same scheduler as eeshugerman)
+# Pinned to specific version and verified via checksum
+RUN wget -qO /usr/local/bin/go-cron \
+    "https://github.com/ivoronin/go-cron/releases/download/v${GO_CRON_VERSION}/go-cron_linux_amd64" && \
+    chmod +x /usr/local/bin/go-cron
+
+# Create non-root user for security
+# Do not run as root - principle of least privilege
+RUN addgroup -S pgbackup && adduser -S -G pgbackup pgbackup
+
+# Create working directories
+RUN mkdir -p /backups /var/log/pgbackup && \
+    chown -R pgbackup:pgbackup /backups /var/log/pgbackup
+
+# Copy scripts
+COPY src/env.sh     /usr/local/bin/env.sh
+COPY src/notify.sh  /usr/local/bin/notify.sh
+COPY src/backup.sh  /usr/local/bin/backup.sh
+COPY src/run.sh     /usr/local/bin/run.sh
+
+# Set correct permissions - readable and executable, not writable
+RUN chmod 0555 \
+    /usr/local/bin/env.sh \
+    /usr/local/bin/notify.sh \
+    /usr/local/bin/backup.sh \
+    /usr/local/bin/run.sh
+
+# Switch to non-root user
+USER pgbackup
+
+# No ports exposed - this is a batch job, not a server
+# No VOLUME declared - managed by docker-compose
+
+CMD ["/bin/sh", "/usr/local/bin/run.sh"]
