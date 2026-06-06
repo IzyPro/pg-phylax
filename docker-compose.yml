@@ -36,7 +36,6 @@ services:
 
       # ---- Backup Schedule -------------------------------------
       # Standard cron: "0 2 * * *" (daily at 2am)
-      # Shortcuts: @daily @weekly @monthly
       # Leave empty to run once and exit (useful for testing)
       SCHEDULE: ${SCHEDULE:-0 2 * * *}
       TZ: ${TZ:-Africa/Lagos}

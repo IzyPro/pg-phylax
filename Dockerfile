@@ -23,9 +23,7 @@ RUN apk add --no-cache \
     # ca-certificates for HTTPS
     ca-certificates \
     # tzdata for timezone support
-    tzdata \
-    # dcron for alpine native scheduling
-    dcron
+    tzdata
 
 
 # Create non-root user for security
