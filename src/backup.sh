@@ -49,13 +49,6 @@ TIMESTAMP="$(date '+%Y-%m-%dT%H-%M-%SZ')"
 DAY_OF_WEEK="$(date '+%u')"    # 1=Monday ... 7=Sunday
 DAY_OF_MONTH="$(date '+%d')"   # 01-31
 
-# Compute cutoff timestamps for retention
-# Using days as the common unit (weeks * 7, months * 31)
-KEEP_DAYS_SECS="$((BACKUP_KEEP_DAYS * 86400))"
-KEEP_WEEKS_SECS="$((BACKUP_KEEP_WEEKS * 7 * 86400))"
-KEEP_MONTHS_SECS="$((BACKUP_KEEP_MONTHS * 31 * 86400))"
-NOW_SECS="$(date '+%s')"
-
 # ---------- Upload file to R2 --------------------------------
 upload_to_r2() {
   local_file="$1"
@@ -72,28 +65,41 @@ upload_to_r2() {
 # Deletes objects older than max_age_secs under the given prefix
 apply_r2_retention() {
   prefix="$1"
-  max_age_secs="$2"
+  max_age_days="$2"
 
-  log "Applying retention to s3://${S3_BUCKET}/${prefix} (max age: $((max_age_secs / 86400)) days)"
+  # Skip if max_age_days is 0
+  if [ "$max_age_days" -eq 0 ]; then
+    log "Retention disabled for ${prefix}, skipping"
+    return 0
+  fi
 
-  # List all objects under prefix and check their LastModified
+  log "Applying retention to s3://${S3_BUCKET}/${prefix} (max age: ${max_age_days} days)"
+
+  # Calculate cutoff date in YYYY-MM-DD format
+  # busybox date supports -d "-N days" for relative dates
+  CUTOFF_DATE="$(date -d "-${max_age_days} days" '+%Y-%m-%d' 2>/dev/null || \
+                 date -v-${max_age_days}d '+%Y-%m-%d' 2>/dev/null)"
+
+  log "Cutoff date: ${CUTOFF_DATE}"
+
+  # List objects and filter by LastModified date prefix comparison
+  # R2 returns LastModified as: 2024-01-15T02:00:00.000Z
+  # We extract YYYY-MM-DD and compare as strings (lexicographic = chronological)
   s3api list-objects-v2 \
     --bucket "$S3_BUCKET" \
     --prefix "$prefix" \
     --query 'Contents[].{Key:Key,LastModified:LastModified}' \
     --output text 2>/dev/null | while IFS=$'\t' read -r key last_modified; do
+
     [ -z "$key" ] && continue
+    [ "$key" = "None" ] && continue
 
-    # Parse LastModified to epoch seconds
-    # LastModified format from AWS: 2024-01-15T02:00:00+00:00
-    obj_secs="$(date -d "$last_modified" '+%s' 2>/dev/null || \
-                date -j -f "%Y-%m-%dT%H:%M:%S" "$(echo "$last_modified" | cut -c1-19)" '+%s' 2>/dev/null || \
-                echo 0)"
+    # Extract just the date portion YYYY-MM-DD from LastModified
+    obj_date="$(echo "$last_modified" | cut -c1-10)"
 
-    age_secs="$((NOW_SECS - obj_secs))"
-
-    if [ "$age_secs" -gt "$max_age_secs" ]; then
-      log "Deleting expired backup: ${key} (age: $((age_secs / 86400)) days)"
+    # String comparison works correctly for ISO dates
+    if [ -n "$obj_date" ] && [ "$obj_date" \< "$CUTOFF_DATE" ]; then
+      log "Deleting expired backup: ${key} (date: ${obj_date}, cutoff: ${CUTOFF_DATE})"
       s3api delete-object \
         --bucket "$S3_BUCKET" \
         --key "$key"
@@ -160,9 +166,9 @@ backup_database() {
   log "Temp file cleaned up"
 
   # Apply retention policies
-  apply_r2_retention "${S3_PREFIX}/${DB}/daily/"   "$KEEP_DAYS_SECS"
-  apply_r2_retention "${S3_PREFIX}/${DB}/weekly/"  "$KEEP_WEEKS_SECS"
-  apply_r2_retention "${S3_PREFIX}/${DB}/monthly/" "$KEEP_MONTHS_SECS"
+  apply_r2_retention "${S3_PREFIX}/${DB}/daily/"   "$BACKUP_KEEP_DAYS"
+  apply_r2_retention "${S3_PREFIX}/${DB}/weekly/"  "$((BACKUP_KEEP_WEEKS * 7))"
+  apply_r2_retention "${S3_PREFIX}/${DB}/monthly/" "$((BACKUP_KEEP_MONTHS * 31))"
 
   log "Backup complete: ${DB} (${DUMP_SIZE_HR})"
 }
