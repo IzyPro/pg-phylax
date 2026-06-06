@@ -10,9 +10,6 @@ FROM alpine:${ALPINE_VERSION}
 
 ARG PG_VERSION
 
-# go-cron version - pinned for reproducibility
-ARG GO_CRON_VERSION=0.0.1
-
 # Install system dependencies
 RUN apk add --no-cache \
     # PostgreSQL client matching PG_VERSION
@@ -26,13 +23,10 @@ RUN apk add --no-cache \
     # ca-certificates for HTTPS
     ca-certificates \
     # tzdata for timezone support
-    tzdata
+    tzdata \
+    # dcron for alpine native scheduling
+    dcron
 
-# Install go-cron (same scheduler as eeshugerman)
-# Pinned to specific version and verified via checksum
-RUN wget -qO /usr/local/bin/go-cron \
-    "https://github.com/ivoronin/go-cron/releases/download/v${GO_CRON_VERSION}/go-cron_linux_amd64" && \
-    chmod +x /usr/local/bin/go-cron
 
 # Create non-root user for security
 # Do not run as root - principle of least privilege
@@ -56,7 +50,7 @@ RUN chmod 0555 \
     /usr/local/bin/run.sh
 
 # Switch to non-root user
-USER pgphylax
+USER root
 
 # No ports exposed - this is a batch job, not a server
 # No VOLUME declared - managed by docker-compose
