@@ -1,13 +1,13 @@
 services:
-  pgbackup:
+  pgphylax:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         # Match your PostgreSQL version
         PG_VERSION: "17"
-    image: pgbackup:latest
-    container_name: pgbackup
+    image: pgphylax:latest
+    container_name: pgphylax
     restart: unless-stopped
 
     environment:

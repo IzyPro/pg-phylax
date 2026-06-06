@@ -36,11 +36,11 @@ RUN wget -qO /usr/local/bin/go-cron \
 
 # Create non-root user for security
 # Do not run as root - principle of least privilege
-RUN addgroup -S pgbackup && adduser -S -G pgbackup pgbackup
+RUN addgroup -S pgphylax && adduser -S -G pgphylax pgphylax
 
 # Create working directories
-RUN mkdir -p /backups /var/log/pgbackup && \
-    chown -R pgbackup:pgbackup /backups /var/log/pgbackup
+RUN mkdir -p /backups /var/log/pgphylax && \
+    chown -R pgphylax:pgphylax /backups /var/log/pgphylax
 
 # Copy scripts
 COPY src/env.sh     /usr/local/bin/env.sh
@@ -56,7 +56,7 @@ RUN chmod 0555 \
     /usr/local/bin/run.sh
 
 # Switch to non-root user
-USER pgbackup
+USER pgphylax
 
 # No ports exposed - this is a batch job, not a server
 # No VOLUME declared - managed by docker-compose

@@ -114,7 +114,7 @@ backup_database() {
   MONTHLY_KEY="${S3_PREFIX}/${DB}/monthly/${DB}_${TIMESTAMP}${BACKUP_SUFFIX}"
 
   # Create temp file securely
-  TEMP_FILE="$(mktemp /tmp/pgbackup_XXXXXX.sql.gz)"
+  TEMP_FILE="$(mktemp /tmp/pgphylax_XXXXXX.sql.gz)"
   # Ensure temp file is always cleaned up
   trap 'rm -f "$TEMP_FILE"' EXIT
 

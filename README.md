@@ -52,7 +52,7 @@ your-bucket/
 After deploying, trigger a manual backup:
 
 ```bash
-docker exec pgbackup /bin/sh /usr/local/bin/backup.sh
+docker exec pgphylax /bin/sh /usr/local/bin/backup.sh
 ```
 
 ## Notifications
