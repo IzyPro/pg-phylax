@@ -23,7 +23,9 @@ RUN apk add --no-cache \
     # ca-certificates for HTTPS
     ca-certificates \
     # tzdata for timezone support
-    tzdata
+    tzdata\
+    # coreutils for GNU date (required for retention math)
+    coreutils
 
 
 # Create non-root user for security

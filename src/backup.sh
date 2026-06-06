@@ -34,15 +34,15 @@ s3api() {
 # ---------- Failure trap -------------------------------------
 # Called automatically on any command failure due to set -e
 BACKUP_START_TIME=""
-on_error() {
+on_exit() {
   exit_code=$?
-  line="$1"
-  log "ERROR: Backup failed at line ${line} with exit code ${exit_code}"
-  # Notify Telegram - failure message
-  sh "${SCRIPT_DIR}/notify.sh" "failure" "Script exited with code ${exit_code} at line ${line}"
-  exit $exit_code
+  if [ $exit_code -ne 0 ]; then
+    log "ERROR: Backup script failed with exit code ${exit_code}"
+    # Notify Telegram - failure message
+    sh "${SCRIPT_DIR}/notify.sh" "failure" "Script exited with code ${exit_code}"
+  fi
 }
-trap 'on_error $LINENO' ERR
+trap 'on_exit' EXIT
 
 # ---------- Date helpers for retention -----------------------
 TIMESTAMP="$(date '+%Y-%m-%dT%H-%M-%SZ')"
@@ -75,10 +75,20 @@ apply_r2_retention() {
 
   log "Applying retention to s3://${S3_BUCKET}/${prefix} (max age: ${max_age_days} days)"
 
-  # Calculate cutoff date in YYYY-MM-DD format
-  # busybox date supports -d "-N days" for relative dates
-  CUTOFF_DATE="$(date -d "-${max_age_days} days" '+%Y-%m-%d' 2>/dev/null || \
-                 date -v-${max_age_days}d '+%Y-%m-%d' 2>/dev/null)"
+# Calculate cutoff date using standard Epoch math
+  CURRENT_EPOCH=$(date +%s)
+  OFFSET_SECONDS=$((max_age_days * 86400))
+  CUTOFF_EPOCH=$((CURRENT_EPOCH - OFFSET_SECONDS))
+  
+  # Support both BusyBox (Linux) and BSD (macOS) epoch formatting safely
+  CUTOFF_DATE="$(date -d "@${CUTOFF_EPOCH}" '+%Y-%m-%d' 2>/dev/null || \
+                 date -r "${CUTOFF_EPOCH}" '+%Y-%m-%d' 2>/dev/null || true)"
+
+  # Safety check so set -e doesn't silently kill the script if it still fails
+  if [ -z "$CUTOFF_DATE" ]; then
+    log "ERROR: Failed to calculate retention date. Incompatible date utility."
+    exit 1
+  fi
 
   log "Cutoff date: ${CUTOFF_DATE}"
 
