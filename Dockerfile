@@ -23,9 +23,7 @@ RUN apk add --no-cache \
     # ca-certificates for HTTPS
     ca-certificates \
     # tzdata for timezone support
-    tzdata\
-    # coreutils for GNU date (required for retention math)
-    coreutils
+    tzdata
 
 
 # Create non-root user for security
@@ -50,7 +48,7 @@ RUN chmod 0555 \
     /usr/local/bin/run.sh
 
 # Switch to non-root user
-USER root
+USER pgphylax
 
 # No ports exposed - this is a batch job, not a server
 # No VOLUME declared - managed by docker-compose
