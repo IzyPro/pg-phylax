@@ -28,7 +28,7 @@ RUN apk add --no-cache \
 
 # Create non-root user for security
 # Do not run as root - principle of least privilege
-# RUN addgroup -S pgphylax && adduser -S -G pgphylax pgphylax
+RUN addgroup -S pgphylax && adduser -S -G pgphylax pgphylax
 
 # Create working directories
 RUN mkdir -p /backups /var/log/pgphylax && \
