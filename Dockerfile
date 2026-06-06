@@ -1,10 +1,10 @@
 # Dockerfile
 # Mirrors eeshugerman/postgres-backup-s3 base approach
 # Uses go-cron for reliable scheduling (same as eeshugerman)
-# Alpine 3.19 for small image size and security
+# Alpine 3.21 for small image size and security
 
-ARG ALPINE_VERSION=3.19
-ARG PG_VERSION=16
+ARG ALPINE_VERSION=3.21
+ARG PG_VERSION=17
 
 FROM alpine:${ALPINE_VERSION}
 

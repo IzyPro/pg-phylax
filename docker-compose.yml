@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
       args:
         # Match your PostgreSQL version
-        PG_VERSION: "16"
+        PG_VERSION: "17"
     image: pgbackup:latest
     container_name: pgbackup
     restart: unless-stopped
