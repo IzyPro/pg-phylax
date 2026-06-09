@@ -17,7 +17,7 @@ if [ -n "${SCHEDULE:-}" ]; then
   chmod 0600 /var/spool/cron/crontabs/root
 
   # busybox crond - -f foreground, -d 8 log level
-  exec busybox crond -f -d 8
+  exec busybox crond -f -d 8 -c /var/spool/cron/crontabs
 else
   echo "[run] No SCHEDULE set - running backup once and exiting"
   exec /bin/sh "${SCRIPT_DIR}/backup.sh"
