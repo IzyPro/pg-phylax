@@ -46,6 +46,7 @@ send_message() {
     --retry 3 \
     --retry-delay 5 \
     --retry-connrefused \
+    --retry-all-errors \
     -X POST "$TELEGRAM_API" \
     -d chat_id="${TELEGRAM_CHAT_ID}" \
     -d parse_mode="MarkdownV2" \

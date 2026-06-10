@@ -34,8 +34,13 @@ s3api() {
 # ---------- Failure trap -------------------------------------
 # Called automatically on any command failure due to set -e
 BACKUP_START_TIME=""
+CURRENT_TEMP_FILE=""
 on_exit() {
   exit_code=$?
+  # Clean up any in-progress temp file on unexpected exit
+  if [ -n "$CURRENT_TEMP_FILE" ]; then
+    rm -f "$CURRENT_TEMP_FILE"
+  fi
   if [ $exit_code -ne 0 ]; then
     log "ERROR: Backup script failed with exit code ${exit_code}"
     # Notify Telegram - failure message
@@ -59,6 +64,21 @@ upload_to_r2() {
     --no-progress \
     --storage-class STANDARD
   log "Upload complete: ${r2_key}"
+}
+
+# ---------- Server-side copy within R2 -----------------------
+# Avoids re-uploading the local file for weekly/monthly copies.
+copy_in_r2() {
+  source_key="$1"
+  dest_key="$2"
+
+  log "Copying in R2: ${source_key} -> ${dest_key}"
+  s3api copy-object \
+    --bucket "$S3_BUCKET" \
+    --copy-source "${S3_BUCKET}/${source_key}" \
+    --key "$dest_key" \
+    --storage-class STANDARD > /dev/null
+  log "Copy complete: ${dest_key}"
 }
 
 # ---------- Apply retention to an R2 prefix ------------------
@@ -124,15 +144,14 @@ backup_database() {
   log "Starting backup: ${DB}"
   log "========================================"
 
-  BACKUP_SUFFIX=".sql.gz"
+  BACKUP_SUFFIX=".dump"
   DAILY_KEY="${S3_PREFIX}/${DB}/daily/${DB}_${TIMESTAMP}${BACKUP_SUFFIX}"
   WEEKLY_KEY="${S3_PREFIX}/${DB}/weekly/${DB}_${TIMESTAMP}${BACKUP_SUFFIX}"
   MONTHLY_KEY="${S3_PREFIX}/${DB}/monthly/${DB}_${TIMESTAMP}${BACKUP_SUFFIX}"
 
-  # Create temp file securely
+  # Create temp file securely and register it for cleanup via the global on_exit handler.
   TEMP_FILE="$(mktemp /tmp/pgbackup_XXXXXX)"
-  # Ensure temp file is always cleaned up
-  trap 'rm -f "$TEMP_FILE"' EXIT
+  CURRENT_TEMP_FILE="$TEMP_FILE"
 
   # Run pg_dump and compress
   log "Running pg_dump for database: ${DB}"
@@ -145,15 +164,18 @@ backup_database() {
   --format=c \
   --compress="$COMPRESSION_METHOD:level=$COMPRESSION_LEVEL" \
   $POSTGRES_EXTRA_OPTS \
-  --file "$TEMP_FILE.dump" \
+  --file "$TEMP_FILE" \
   "$DB"
 
   # Verify the dump is not empty
-  DUMP_SIZE="$(wc -c < "$TEMP_FILE")"
-  if [ "$DUMP_SIZE" -lt 100 ]; then
-    log "ERROR: Backup file is suspiciously small (${DUMP_SIZE} bytes) - possible pg_dump failure"
-    rm -f "$TEMP_FILE"
-    exit 1
+  if $VERIFY_DUMP_SIZE; then
+    DUMP_SIZE="$(wc -c < "$TEMP_FILE")"
+    if [ "$DUMP_SIZE" -lt 100 ]; then
+      log "ERROR: Backup file is suspiciously small (${DUMP_SIZE} bytes) - possible pg_dump failure"
+      rm -f "$TEMP_FILE"
+      CURRENT_TEMP_FILE=""
+      exit 1
+    fi
   fi
 
   DUMP_SIZE_HR="$(du -sh "$TEMP_FILE" | cut -f1)"
@@ -162,27 +184,27 @@ backup_database() {
   # Always upload to daily
   upload_to_r2 "$TEMP_FILE" "$DAILY_KEY"
 
-  # Upload to weekly on Sundays (DAY_OF_WEEK=7)
+  # Server-side copy to weekly on Sundays (DAY_OF_WEEK=7)
   if [ "$DAY_OF_WEEK" = "7" ]; then
-    log "Weekly backup day - uploading to weekly prefix"
-    upload_to_r2 "$TEMP_FILE" "$WEEKLY_KEY"
+    log "Weekly backup day - copying to weekly prefix"
+    copy_in_r2 "$DAILY_KEY" "$WEEKLY_KEY"
   fi
 
-  # Upload to monthly on 1st of the month
+  # Server-side copy to monthly on 1st of the month
   if [ "$DAY_OF_MONTH" = "01" ]; then
-    log "Monthly backup day - uploading to monthly prefix"
-    upload_to_r2 "$TEMP_FILE" "$MONTHLY_KEY"
+    log "Monthly backup day - copying to monthly prefix"
+    copy_in_r2 "$DAILY_KEY" "$MONTHLY_KEY"
   fi
 
-  # Clean up temp file
+  # Clean up temp file and clear the global tracker
   rm -f "$TEMP_FILE"
-  trap - EXIT
+  CURRENT_TEMP_FILE=""
   log "Temp file cleaned up"
 
   # Apply retention policies
   apply_r2_retention "${S3_PREFIX}/${DB}/daily/"   "$BACKUP_KEEP_DAYS"
   apply_r2_retention "${S3_PREFIX}/${DB}/weekly/"  "$((BACKUP_KEEP_WEEKS * 7))"
-  apply_r2_retention "${S3_PREFIX}/${DB}/monthly/" "$((BACKUP_KEEP_MONTHS * 31))"
+  apply_r2_retention "${S3_PREFIX}/${DB}/monthly/" "$((BACKUP_KEEP_MONTHS * 30))"
 
   log "Backup complete: ${DB} (${DUMP_SIZE_HR})"
 }

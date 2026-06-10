@@ -23,6 +23,7 @@ services:
       POSTGRES_EXTRA_OPTS: ${POSTGRES_EXTRA_OPTS:--no-owner --no-acl}
       COMPRESSION_METHOD: ${COMPRESSION_METHOD:-zstd}
       COMPRESSION_LEVEL: ${COMPRESSION_LEVEL:-4}
+      VERIFY_DUMP_SIZE: ${VERIFY_DUMP_SIZE:-true}
 
       # ---- Cloudflare R2 ---------------------------------------
       # Endpoint format: https://<account_id>.r2.cloudflarestorage.com
