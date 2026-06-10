@@ -144,7 +144,7 @@ backup_database() {
   log "Starting backup: ${DB}"
   log "========================================"
 
-  BACKUP_SUFFIX=".dump"
+  BACKUP_SUFFIX=".gpg"
   DAILY_KEY="${S3_PREFIX}/${DB}/daily/${DB}_${TIMESTAMP}${BACKUP_SUFFIX}"
   WEEKLY_KEY="${S3_PREFIX}/${DB}/weekly/${DB}_${TIMESTAMP}${BACKUP_SUFFIX}"
   MONTHLY_KEY="${S3_PREFIX}/${DB}/monthly/${DB}_${TIMESTAMP}${BACKUP_SUFFIX}"
@@ -164,8 +164,7 @@ backup_database() {
   --format=c \
   --compress="$COMPRESSION_METHOD:level=$COMPRESSION_LEVEL" \
   $POSTGRES_EXTRA_OPTS \
-  --file "$TEMP_FILE" \
-  "$DB"
+  "$DB" | gpg --batch --yes --passphrase "$ENC_PASSWORD" --symmetric --cipher-algo AES256 -o "$TEMP_FILE"
 
   # Verify the dump is not empty
   if $VERIFY_DUMP_SIZE; then

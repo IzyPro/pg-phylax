@@ -43,6 +43,7 @@ assert_set "S3_ACCESS_KEY_ID"  "$S3_ACCESS_KEY_ID"
 assert_set "S3_SECRET_ACCESS_KEY" "$S3_SECRET_ACCESS_KEY"
 assert_set "TELEGRAM_BOT_TOKEN"   "$TELEGRAM_BOT_TOKEN"
 assert_set "TELEGRAM_CHAT_ID"     "$TELEGRAM_CHAT_ID"
+assert_set "ENC_PASSWORD"         "$ENC_PASSWORD"
 
 # ---------- Configure AWS CLI for R2 -------------------------
 export AWS_ACCESS_KEY_ID="$S3_ACCESS_KEY_ID"

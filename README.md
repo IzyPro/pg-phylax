@@ -71,10 +71,17 @@ aws s3 ls s3://your-bucket/postgres-backups/your-db/daily/ \
   --endpoint-url https://your-account-id.r2.cloudflarestorage.com
 
 # Download a backup
-aws s3 cp s3://your-bucket/postgres-backups/your-db/daily/your-db_2026-06-05T02-00-00Z.sql.gz \
-  ./restore.sql.gz \
+aws s3 cp s3://your-bucket/postgres-backups/your-db/daily/your-db_2026-06-05T02-00-00Z.gpg \
+  ./restore.gpg \
   --endpoint-url https://your-account-id.r2.cloudflarestorage.com
 
 # Restore
-gunzip -c restore.sql.gz | psql -h your-host -U your-user your-database
+#### Create New Database (Skip if restoring to existing db)
+psql -h <postgres-host> -U <postgres-user> -c "CREATE DATABASE <target_db_name>;"
+
+#### Decrypt
+gpg --batch --passphrase "your_secure_encryption_password" -d <path/to/backup.dump.gpg> > <path/to/decrypted_backup.dump>
+
+#### Restore Dump File
+pg_restore -h <postgres-host> -U <postgres-user> -d <target_db_name> -v <path/to/decrypted_backup.dump>
 ```

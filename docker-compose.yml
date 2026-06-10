@@ -24,6 +24,7 @@ services:
       COMPRESSION_METHOD: ${COMPRESSION_METHOD:-zstd}
       COMPRESSION_LEVEL: ${COMPRESSION_LEVEL:-4}
       VERIFY_DUMP_SIZE: ${VERIFY_DUMP_SIZE:-true}
+      ENC_PASSWORD: ${ENC_PASSWORD}
 
       # ---- Cloudflare R2 ---------------------------------------
       # Endpoint format: https://<account_id>.r2.cloudflarestorage.com
