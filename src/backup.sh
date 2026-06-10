@@ -137,14 +137,15 @@ backup_database() {
   # Run pg_dump and compress
   log "Running pg_dump for database: ${DB}"
 
-  pg_dump \
-  -h "$POSTGRES_HOST" \
-  -p "$POSTGRES_PORT" \
-  -U "$POSTGRES_USER" \
-  -F c \
+  PGPASSWORD="$POSTGRES_PASSWORD" pg_dump \
+  --host="$POSTGRES_HOST" \
+  --port="$POSTGRES_PORT" \
+  --username="$POSTGRES_USER" \
+  --no-password \
+  --format=c \
   --compress="$COMPRESSION_METHOD:level=$COMPRESSION_LEVEL" \
   $POSTGRES_EXTRA_OPTS \
-  -f "$TEMP_FILE.dump" \
+  --file "$TEMP_FILE.dump" \
   "$DB"
 
   # Verify the dump is not empty
