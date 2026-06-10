@@ -130,7 +130,7 @@ backup_database() {
   MONTHLY_KEY="${S3_PREFIX}/${DB}/monthly/${DB}_${TIMESTAMP}${BACKUP_SUFFIX}"
 
   # Create temp file securely
-  TEMP_FILE="$(mktemp /tmp/pgbackup_XXXXXX.dump)"
+  TEMP_FILE="$(mktemp /tmp/pgbackup_XXXXXX)"
   # Ensure temp file is always cleaned up
   trap 'rm -f "$TEMP_FILE"' EXIT
 
@@ -144,7 +144,7 @@ backup_database() {
   -F c \
   --compress="$COMPRESSION_METHOD:level=$COMPRESSION_LEVEL" \
   $POSTGRES_EXTRA_OPTS \
-  -f "$TEMP_FILE" \
+  -f "$TEMP_FILE.dump" \
   "$DB"
 
   # Verify the dump is not empty
