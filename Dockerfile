@@ -28,8 +28,8 @@ RUN curl -fsSL "https://github.com/aptible/supercronic/releases/download/${SUPER
 RUN addgroup -S pgphylax && adduser -S -G pgphylax pgphylax
 
 # Create working directories
-RUN mkdir -p /backups /var/log/pgphylax && \
-    chown -R pgphylax:pgphylax /backups /var/log/pgphylax
+RUN mkdir -p /backups /var/log/pgphylax /etc/pgphylax && \
+    chown -R pgphylax:pgphylax /backups /var/log/pgphylax /etc/pgphylax
 
 # Copy scripts
 COPY src/env.sh     /usr/local/bin/env.sh

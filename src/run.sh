@@ -11,13 +11,13 @@ if [ -n "${SCHEDULE:-}" ]; then
 
   # Write crontab file for supercronic
   printf '%s /bin/sh %s/backup.sh\n' "$SCHEDULE" "$SCRIPT_DIR" \
-    > /etc/supercronic-crontab
+    > /etc/pgphylax/crontab
 
   echo "[run] Crontab written:"
-  cat /etc/supercronic-crontab
+  cat /etc/pgphylax/crontab
 
   # busybox crond - -f foreground, -d 8 log level
-  exec supercronic -passthrough-logs /etc/supercronic-crontab
+  exec supercronic -passthrough-logs /etc/pgphylax/crontab
 else
   echo "[run] No SCHEDULE set - running backup once and exiting"
   exec /bin/sh "${SCRIPT_DIR}/backup.sh"
