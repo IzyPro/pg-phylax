@@ -9,15 +9,15 @@ if [ -n "${SCHEDULE:-}" ]; then
   echo "[run] Schedule: ${SCHEDULE}"
   echo "[run] Timezone: ${TZ}"
 
-  # Write crontab for busybox crond
-  mkdir -p /var/spool/cron/crontabs
-  printf '%s /bin/sh %s/backup.sh >> /var/log/pgbackup/cron.log 2>&1\n' \
-    "$SCHEDULE" "$SCRIPT_DIR" \
-    > /var/spool/cron/crontabs/root
-  chmod 0600 /var/spool/cron/crontabs/root
+  # Write crontab file for supercronic
+  printf '%s /bin/sh %s/backup.sh\n' "$SCHEDULE" "$SCRIPT_DIR" \
+    > /etc/supercronic-crontab
+
+  echo "[run] Crontab written:"
+  cat /etc/supercronic-crontab
 
   # busybox crond - -f foreground, -d 8 log level
-  exec busybox crond -f -d 8 -c /var/spool/cron/crontabs
+  exec supercronic -passthrough-logs /etc/supercronic-crontab
 else
   echo "[run] No SCHEDULE set - running backup once and exiting"
   exec /bin/sh "${SCRIPT_DIR}/backup.sh"
