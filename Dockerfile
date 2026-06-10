@@ -16,7 +16,8 @@ RUN apk add --no-cache \
     curl \
     bash \
     ca-certificates \
-    tzdata
+    tzdata \
+    gnupg
 
 # Install supercronic using build args
 RUN curl -fsSL "https://github.com/aptible/supercronic/releases/download/${SUPERCRONIC_VERSION}/${SUPERCRONIC_ARCH}" \
