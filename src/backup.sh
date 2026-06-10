@@ -130,19 +130,22 @@ backup_database() {
   MONTHLY_KEY="${S3_PREFIX}/${DB}/monthly/${DB}_${TIMESTAMP}${BACKUP_SUFFIX}"
 
   # Create temp file securely
-  TEMP_FILE="$(mktemp /tmp/pgbackup_XXXXXX)"
+  TEMP_FILE="$(mktemp /tmp/pgbackup_XXXXXX.dump)"
   # Ensure temp file is always cleaned up
   trap 'rm -f "$TEMP_FILE"' EXIT
 
   # Run pg_dump and compress
   log "Running pg_dump for database: ${DB}"
-  PGPASSWORD="$POSTGRES_PASSWORD" pg_dump \
-    --host="$POSTGRES_HOST" \
-    --port="$POSTGRES_PORT" \
-    --username="$POSTGRES_USER" \
-    --no-password \
-    $POSTGRES_EXTRA_OPTS \
-    "$DB" | gzip > "$TEMP_FILE"
+
+  pg_dump \
+  -h "$POSTGRES_HOST" \
+  -p "$POSTGRES_PORT" \
+  -U "$POSTGRES_USER" \
+  -F c \
+  --compress="$COMPRESSION_METHOD:level=$COMPRESSION_LEVEL" \
+  $POSTGRES_EXTRA_OPTS \
+  -f "$TEMP_FILE" \
+  "$DB"
 
   # Verify the dump is not empty
   DUMP_SIZE="$(wc -c < "$TEMP_FILE")"

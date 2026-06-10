@@ -20,7 +20,9 @@ services:
       # Comma-separated for multiple databases: db1,db2,db3
       POSTGRES_DB: ${POSTGRES_DB}
       # Extra pg_dump options - defaults to -Z1 --no-owner --no-acl
-      POSTGRES_EXTRA_OPTS: ${POSTGRES_EXTRA_OPTS:--Z1 --no-owner --no-acl}
+      POSTGRES_EXTRA_OPTS: ${POSTGRES_EXTRA_OPTS:--no-owner --no-acl}
+      COMPRESSION_METHOD: ${COMPRESSION_METHOD:-zstd}
+      COMPRESSION_LEVEL: ${COMPRESSION_LEVEL:-4}
 
       # ---- Cloudflare R2 ---------------------------------------
       # Endpoint format: https://<account_id>.r2.cloudflarestorage.com

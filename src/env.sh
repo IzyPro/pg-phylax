@@ -4,7 +4,9 @@
 
 # ---------- Postgres defaults --------------------------------
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
-POSTGRES_EXTRA_OPTS="${POSTGRES_EXTRA_OPTS:--Z1 --no-owner --no-acl}"
+POSTGRES_EXTRA_OPTS="${POSTGRES_EXTRA_OPTS:--no-owner --no-acl}"
+COMPRESSION_METHOD="${COMPRESSION_METHOD:-zstd}"
+COMPRESSION_LEVEL="${COMPRESSION_LEVEL:-4}"
 
 # ---------- S3/R2 defaults -----------------------------------
 S3_REGION="${S3_REGION:-auto}"
